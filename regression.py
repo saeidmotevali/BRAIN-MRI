@@ -59,7 +59,7 @@ class ABCDTrainer(ETTrainer):
         return {
             'loss': loss, 'metrics': mse,
             'averages': mse, 'label': label,
-            'out': out
+            'pred': out
         }
 
     def init_experiment_cache(self):
