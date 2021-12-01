@@ -25,8 +25,8 @@ class ABCDDataset(ETDataset):
         label = self.labels[self.labels['subjectkey'] == file][dt['labels_column']].values[0]
         self.indices.append([dataset_name, file, label])
 
-    def __getitem__(self, item):
-        dataset, file, label = self.indices[item]
+    def __getitem__(self, ix):
+        dataset, file, label = self.indices[ix]
         dt = self.dataspecs[dataset]
 
         nii_file = glob.glob(f"{dt['data_dir']}{os.sep}{file.replace('_', '')}/**/Sm6mwc1pT1.nii", recursive=True)[0]
@@ -67,8 +67,8 @@ class ABCDTrainer(ETTrainer):
         self.cache.update(log_header='MSE')
 
     def save_predictions(self, dataset, its) -> dict:
-        pred = dataset['pred']().tolist()
-        label = dataset['label']().tolist()
+        pred = its['pred']().tolist()
+        label = its['label']().tolist()
         self.pred_results += list(zip(pred, label))
         return {}
 
@@ -78,7 +78,7 @@ class ABCDTrainer(ETTrainer):
         df['MAE'] = (df['pred'] - df['true']).abs()
         df['MSE'] = (df['pred'] - df['true']) ** 2
         df = df.append(df[['MAE', 'MSE']].mean(), ignore_index=True).fillna('Total')
-        with open(self.cache['logs_dir'] + os.sep + self.cache['experiment_id'] + '_predictions.csv', 'w') as f:
+        with open(self.cache['log_dir'] + os.sep + self.cache['experiment_id'] + '_predictions.csv', 'w') as f:
             f.write(df.to_csv(index=False))
         return result
 
