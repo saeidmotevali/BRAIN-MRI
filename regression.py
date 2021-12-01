@@ -38,6 +38,10 @@ class ABCDDataset(ETDataset):
 
 
 class ABCDTrainer(ETTrainer):
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.pred_results = []
+
     def _init_nn_model(self):
         self.nn['model'] = VGG(
             num_channels=self.args.get('input_channel', 1),
@@ -52,11 +56,31 @@ class ABCDTrainer(ETTrainer):
         loss = F.mse_loss(out, label)
         mse = self.new_metrics()
         mse.add(loss.item())
-        return {'loss': loss, 'metrics': mse, 'averages': mse}
+        return {
+            'loss': loss, 'metrics': mse,
+            'averages': mse, 'label': label,
+            'out': out
+        }
 
     def init_experiment_cache(self):
         self.cache.update(monitor_metric='average', metric_direction='minimize')
         self.cache.update(log_header='MSE')
+
+    def save_predictions(self, dataset, its) -> dict:
+        pred = dataset['pred']().tolist()
+        label = dataset['label']().tolist()
+        self.pred_results += list(zip(pred, label))
+        return {}
+
+    def inference(self, mode='test', save_predictions=True, datasets: list = None, distributed=False):
+        result = super().inference(mode, save_predictions, datasets, distributed)
+        df = pd.DataFrame(self.pred_results, columns=['pred', 'true'])
+        df['MAE'] = (df['pred'] - df['true']).abs()
+        df['MSE'] = (df['pred'] - df['true']) ** 2
+        df = df.append(df[['MAE', 'MSE']].mean(), ignore_index=True).fillna('Total')
+        with open(self.cache['logs_dir'] + os.sep + 'predictions.csv', 'w') as f:
+            f.write(df.to_csv(index=False))
+        return result
 
 
 class ABCDDataHandle(ETDataHandle):
