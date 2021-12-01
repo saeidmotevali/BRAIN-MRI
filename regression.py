@@ -20,8 +20,7 @@ class ABCDDataset(ETDataset):
     def load_index(self, dataset_name, file):
         dt = self.dataspecs[dataset_name]
         if not self.labels:
-            _label_file = [f for f in os.listdir(dt['label_dir']) if f.endswith('.csv')][0]
-            self.labels = pd.read_csv(dt['label_dir'] + os.sep + _label_file)
+            self.labels = pd.read_csv(dt['label_csv_path'])
 
         label = self.labels[self.labels['subjectkey'] == file][dt['labels_column']].values[0]
         self.indices.append([dataset_name, file, label])
@@ -49,7 +48,6 @@ class ABCDTrainer(ETTrainer):
     def iteration(self, batch) -> dict:
         input = batch['input'].to(self.device['gpu']).float()
         label = batch['label'].to(self.device['gpu']).float()
-        print(input.shape)
         out = self.nn['model'](input)
         loss = F.mse_loss(out, label)
         mse = self.new_metrics()
@@ -63,10 +61,8 @@ class ABCDTrainer(ETTrainer):
 
 class ABCDDataHandle(ETDataHandle):
     def _list_files(self, dspec) -> list:
-        _valid_file = [f for f in os.listdir(dspec['label_dir']) if f.endswith('.txt')][0]
-        valid_subjects = [l.strip() for l in open(dspec['label_dir'] + os.sep + _valid_file)]
-        files = pd.read_csv(dspec['label_dir'] + os.sep + os.listdir(dspec['label_dir'])[0])['subjectkey'].tolist()
-
+        valid_subjects = pd.read_csv(dspec['valid_subjects_path'])['filename'].tolist()
+        files = pd.read_csv(dspec['label_csv_path'])['subjectkey'].tolist()
         # files = ['NDAR_INV0A4P0LWM', 'NDAR_INV0A4ZDYNL', 'NDAR_INV0A6WVRZY']
         valid_files = [f for f in files if f.replace('_', '') in valid_subjects]
         return valid_files
