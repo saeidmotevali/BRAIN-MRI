@@ -67,8 +67,8 @@ class ABCDTrainer(ETTrainer):
         self.cache.update(log_header='MSE')
 
     def save_predictions(self, dataset, its) -> dict:
-        pred = its['pred']().tolist()
-        label = its['label']().tolist()
+        pred = its['pred'].detach().numpy().tolist()
+        label = its['label'].detach().numpy().tolist()
         self.pred_results += list(zip(pred, label))
         return {}
 
