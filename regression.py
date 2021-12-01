@@ -67,17 +67,17 @@ class ABCDTrainer(ETTrainer):
         self.cache.update(log_header='MSE')
 
     def save_predictions(self, dataset, its) -> dict:
-        pred = its['pred'].detach().cpu().numpy().tolist()
-        label = its['label'].detach().cpu().numpy().tolist()
+        pred = its['pred'].detach().cpu().squeeze().numpy().tolist()
+        label = its['label'].detach().cpu().squeeze().numpy().tolist()
         self.pred_results += list(zip(pred, label))
         return {}
 
     def inference(self, mode='test', save_predictions=True, datasets: list = None, distributed=False):
         result = super().inference(mode, save_predictions, datasets, distributed)
         df = pd.DataFrame(self.pred_results, columns=['pred', 'true'])
-        # df['MAE'] = (df['pred'] - df['true']).abs()
-        # df['MSE'] = (df['pred'] - df['true']) ** 2
-        # df = df.append(df[['MAE', 'MSE']].mean(), ignore_index=True).fillna('Total')
+        df['MAE'] = (df['pred'] - df['true']).abs()
+        df['MSE'] = (df['pred'] - df['true']) ** 2
+        df = df.append(df[['MAE', 'MSE']].mean(), ignore_index=True).fillna('Total')
         with open(self.cache['log_dir'] + os.sep + self.cache['experiment_id'] + '_predictions.csv', 'w') as f:
             f.write(df.to_csv(index=False))
         return result
