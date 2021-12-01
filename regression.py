@@ -78,7 +78,7 @@ class ABCDTrainer(ETTrainer):
         df['MAE'] = (df['pred'] - df['true']).abs()
         df['MSE'] = (df['pred'] - df['true']) ** 2
         df = df.append(df[['MAE', 'MSE']].mean(), ignore_index=True).fillna('Total')
-        with open(self.cache['logs_dir'] + os.sep + 'predictions.csv', 'w') as f:
+        with open(self.cache['logs_dir'] + os.sep + self.cache['experiment_id'] + '_predictions.csv', 'w') as f:
             f.write(df.to_csv(index=False))
         return result
 
