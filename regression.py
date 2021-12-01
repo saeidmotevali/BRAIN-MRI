@@ -75,9 +75,9 @@ class ABCDTrainer(ETTrainer):
     def inference(self, mode='test', save_predictions=True, datasets: list = None, distributed=False):
         result = super().inference(mode, save_predictions, datasets, distributed)
         df = pd.DataFrame(self.pred_results, columns=['pred', 'true'])
-        df['MAE'] = (df['pred'] - df['true']).abs()
-        df['MSE'] = (df['pred'] - df['true']) ** 2
-        df = df.append(df[['MAE', 'MSE']].mean(), ignore_index=True).fillna('Total')
+        # df['MAE'] = (df['pred'] - df['true']).abs()
+        # df['MSE'] = (df['pred'] - df['true']) ** 2
+        # df = df.append(df[['MAE', 'MSE']].mean(), ignore_index=True).fillna('Total')
         with open(self.cache['log_dir'] + os.sep + self.cache['experiment_id'] + '_predictions.csv', 'w') as f:
             f.write(df.to_csv(index=False))
         return result
