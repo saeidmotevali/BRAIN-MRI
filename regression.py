@@ -7,6 +7,8 @@ import torch.nn.functional as F
 import glob
 import nibabel as ni
 import numpy as np
+import torch
+from torch.utils.data import WeightedRandomSampler
 
 
 class ABCDDataset(ETDataset):
@@ -64,6 +66,33 @@ class ABCDDataHandle(ETDataHandle):
         _valid_file = [f for f in os.listdir(dspec['label_dir']) if f.endswith('.txt')][0]
         valid_subjects = [l.strip() for l in open(dspec['label_dir'] + os.sep + _valid_file)]
         files = pd.read_csv(dspec['label_dir'] + os.sep + os.listdir(dspec['label_dir'])[0])['subjectkey'].tolist()
+
         # files = ['NDAR_INV0A4P0LWM', 'NDAR_INV0A4ZDYNL', 'NDAR_INV0A6WVRZY']
         valid_files = [f for f in files if f.replace('_', '') in valid_subjects]
         return valid_files
+
+    # def get_loader(self, handle_key='', distributed=False, use_unpadded_sampler=False, **kw):
+    #     sampler = None
+    #     if handle_key == 'train':
+    #         """Oversample skewed dataset by using Weighted Sampler"""
+    #
+    #         _labels = [a[-1] for a in kw['dataset'].indices]
+    #         hist = torch.histc(torch.Tensor(_labels), 10)
+    #
+    #         hist_adjusted = hist.clone()
+    #
+    #         offset = 0.13
+    #         hist_adjusted[hist < offset * len(_labels)] += offset * len(_labels)
+    #         hist_sum = hist_adjusted.sum().item()
+    #
+    #         probs = []
+    #         for i in range(len(hist)):
+    #             for _ in range(int(hist[i])):
+    #                 probs.append((hist_sum - hist_adjusted[i].item()) / hist_sum)
+    #
+    #         probs = np.array(probs) / sum(probs)
+    #
+    #         assert len(probs) == len(
+    #             _labels), f"Sampling Weights should be equal: probs {len(probs)}, labels {len(_labels)}"
+    #         sampler = WeightedRandomSampler(probs, len(_labels))
+    #     return super().get_loader(handle_key, distributed, use_unpadded_sampler, sampler=sampler, **kw)
