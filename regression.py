@@ -91,28 +91,27 @@ class ABCDDataHandle(ETDataHandle):
         valid_files = [f for f in files if f.replace('_', '') in valid_subjects]
         return valid_files
 
-    # def get_loader(self, handle_key='', distributed=False, use_unpadded_sampler=False, **kw):
-    #     sampler = None
-    #     if handle_key == 'train':
-    #         """Oversample skewed dataset by using Weighted Sampler"""
-    #
-    #         _labels = [a[-1] for a in kw['dataset'].indices]
-    #         hist = torch.histc(torch.Tensor(_labels), 10)
-    #
-    #         hist_adjusted = hist.clone()
-    #
-    #         offset = 0.13
-    #         hist_adjusted[hist < offset * len(_labels)] += offset * len(_labels)
-    #         hist_sum = hist_adjusted.sum().item()
-    #
-    #         probs = []
-    #         for i in range(len(hist)):
-    #             for _ in range(int(hist[i])):
-    #                 probs.append((hist_sum - hist_adjusted[i].item()) / hist_sum)
-    #
-    #         probs = np.array(probs) / sum(probs)
-    #
-    #         assert len(probs) == len(
-    #             _labels), f"Sampling Weights should be equal: probs {len(probs)}, labels {len(_labels)}"
-    #         sampler = WeightedRandomSampler(probs, len(_labels))
-    #     return super().get_loader(handle_key, distributed, use_unpadded_sampler, sampler=sampler, **kw)
+    def get_loader(self, handle_key='', distributed=False, use_unpadded_sampler=False, **kw):
+        sampler = None
+        if handle_key == 'train':
+            """Oversample skewed dataset by using Weighted Sampler"""
+            kw['dataset'].indices = sorted(kw['dataset'].indices, key=lambda x : x[2])
+            _labels = [a[2] for a in kw['dataset'].indices]
+            hist = torch.histc(torch.Tensor(_labels), 10)
+
+            hist_adjusted = hist.clone()
+            offset = 0.13
+            hist_adjusted[hist < offset * len(_labels)] += offset * len(_labels)
+            hist_sum = hist_adjusted.sum().item()
+
+            probs = []
+            for i in range(len(hist)):
+                for _ in range(int(hist[i])):
+                    probs.append((hist_sum - hist_adjusted[i].item()) / hist_sum)
+
+            probs = np.array(probs) / sum(probs)
+
+            assert len(probs) == len(
+                _labels), f"Sampling Weights should be equal: probs {len(probs)}, labels {len(_labels)}"
+            sampler = WeightedRandomSampler(probs, len(_labels))
+        return super().get_loader(handle_key, distributed, use_unpadded_sampler, sampler=sampler, **kw)
