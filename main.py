@@ -31,5 +31,5 @@ python main.py -ph train -b 32 -e 151 --b-mul 4 -lr 0.005 -nf 10
 """
 if __name__ == "__main__":
     dataloader_args = {'train': {'drop_last': True}}
-    runner = EasyTorch([ABCD_local], args=args, dataloader_args=dataloader_args)
+    runner = EasyTorch([ABCD], args=args, dataloader_args=dataloader_args)
     runner.run(ABCDTrainer, ABCDDataset, ABCDDataHandle)
