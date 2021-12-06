@@ -1,4 +1,4 @@
-from easytorch import ETDataset, ETTrainer, ETDataHandle
+from easytorch import ETDataset, ETTrainer, ETDataHandle, Prf1a
 import torchio as tio
 import pandas as pd
 import os
@@ -34,7 +34,9 @@ class ABCDDataset(ETDataset):
         if self.mode == 'train':
             arr = self.transform(arr)
 
-        return {'input': arr, 'label': np.array([label], dtype=np.float)}
+        label = int(label > 60)
+
+        return {'input': arr, 'label': label}
 
 
 class ABCDTrainer(ETTrainer):
@@ -51,24 +53,27 @@ class ABCDTrainer(ETTrainer):
 
     def iteration(self, batch) -> dict:
         input = batch['input'].to(self.device['gpu']).float()
-        label = batch['label'].to(self.device['gpu']).float()
+        label = batch['label'].to(self.device['gpu']).long()
         out = self.nn['model'](input)
-        loss = F.mse_loss(out, label)
-        mse = self.new_metrics()
-        mse.add(loss.item())
-        return {
-            'loss': loss, 'metrics': mse,
-            'averages': mse, 'label': label,
-            'pred': out
-        }
+        loss = F.cross_entropy(out, label)
+        out = F.softmax(out, 1)
+
+        _, pred = torch.max(out, 1)
+        sc = self.new_metrics()
+        sc.add(pred, label)
+
+        avg = self.new_averages()
+        avg.add(loss.item(), len(input))
+
+        return {'loss': loss, 'averages': avg, 'pred': out[:, 1], 'metrics': sc, 'label': label}
 
     def init_experiment_cache(self):
         self.cache.update(monitor_metric='average', metric_direction='minimize')
         self.cache.update(log_header='MSE')
 
     def save_predictions(self, dataset, its) -> dict:
-        pred = its['pred'].detach().cpu().squeeze().numpy().tolist()
-        label = its['label'].detach().cpu().squeeze().numpy().tolist()
+        pred = its['pred'].detach().cpu().numpy().tolist()
+        label = its['label'].detach().cpu().numpy().tolist()
         self.pred_results += list(zip(pred, label))
         return {}
 
@@ -81,6 +86,9 @@ class ABCDTrainer(ETTrainer):
         with open(self.cache['log_dir'] + os.sep + self.cache['experiment_id'] + '_predictions.csv', 'w') as f:
             f.write(df.to_csv(index=False))
         return result
+
+    def new_metrics(self):
+        return Prf1a()
 
 
 class ABCDDataHandle(ETDataHandle):
@@ -95,7 +103,7 @@ class ABCDDataHandle(ETDataHandle):
         sampler = None
         if handle_key == 'train':
             """Oversample skewed dataset by using Weighted Sampler"""
-            kw['dataset'].indices = sorted(kw['dataset'].indices, key=lambda x : x[2])
+            kw['dataset'].indices = sorted(kw['dataset'].indices, key=lambda x: x[2])
             _labels = [a[2] for a in kw['dataset'].indices]
             hist = torch.histc(torch.Tensor(_labels), 10)
 
