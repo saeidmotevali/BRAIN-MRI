@@ -68,8 +68,8 @@ class ABCDTrainer(ETTrainer):
         return {'loss': loss, 'averages': avg, 'pred': out[:, 1], 'metrics': sc, 'label': label}
 
     def init_experiment_cache(self):
-        self.cache.update(monitor_metric='average', metric_direction='minimize')
-        self.cache.update(log_header='MSE')
+        self.cache.update(monitor_metric='f1', metric_direction='maximize')
+        self.cache.update(log_header='LOSS|Accuracy,F1,Precision,Recall')
 
     def save_predictions(self, dataset, its) -> dict:
         pred = its['pred'].detach().cpu().numpy().tolist()
